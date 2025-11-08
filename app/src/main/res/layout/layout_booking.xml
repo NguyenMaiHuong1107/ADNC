@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Tiêu đề -->
+        <TextView
+            android:id="@+id/tvBookingTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Thông tin đặt chỗ"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:letterSpacing="0.02"
+            android:paddingBottom="8dp"/>
+
+        <!-- Card: Người lớn / Trẻ em -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:cardCornerRadius="16dp"
+            app:cardUseCompatPadding="true"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <!-- Hàng: Người lớn -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:paddingVertical="4dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_person_24"
+                        app:tint="@android:color/black"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:text="Số người lớn"
+                        android:textSize="14sp"/>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <!-- Nút trừ -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAdultMinus"
+                            android:gravity="center"
+                            style="@style/Widget.MaterialComponents.Button"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:backgroundTint="#FF3B30"
+                            app:cornerRadius="8dp"
+                            app:icon="@drawable/ic_remove_24"
+                            app:iconTint="@android:color/white"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:text=""
+                            android:layout_marginEnd="8dp" />
+
+                        <!-- Số lượng -->
+                        <TextView
+                            android:id="@+id/tvAdultCount"
+                            android:layout_width="56dp"
+                            android:layout_height="40dp"
+                            android:gravity="center"
+                            android:text="1"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@android:color/black"
+                            android:background="@drawable/bg_counter_square"
+                            android:layout_marginEnd="8dp" />
+
+                        <!-- Nút cộng -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAdultPlus"
+                            android:gravity="center"
+                            style="@style/Widget.MaterialComponents.Button"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:backgroundTint="#FF3B30"
+                            app:cornerRadius="8dp"
+                            app:icon="@drawable/ic_add_24"
+                            app:iconTint="@android:color/white"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:text="" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    app:thickness="1dp"/>
+
+                <!-- Hàng: Trẻ em -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:paddingVertical="4dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_child_care_24"
+                        app:tint="@android:color/black"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:text="Số trẻ em"
+                        android:textSize="14sp"/>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnChildMinus"
+                            style="@style/Widget.MaterialComponents.Button"
+                            android:gravity="center"
+
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:backgroundTint="#FF3B30"
+                            app:cornerRadius="8dp"
+                            app:icon="@drawable/ic_remove_24"
+                            app:iconTint="@android:color/white"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:text=""
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvChildCount"
+                            android:layout_width="56dp"
+                            android:layout_height="40dp"
+                            android:gravity="center"
+                            android:text="0"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@android:color/black"
+                            android:background="@drawable/bg_counter_square"
+                            android:layout_marginEnd="8dp" />
+
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnChildPlus"
+                            style="@style/Widget.MaterialComponents.Button"
+                            android:gravity="center"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:backgroundTint="#FF3B30"
+                            app:cornerRadius="8dp"
+                            app:icon="@drawable/ic_add_24"
+                            app:iconTint="@android:color/white"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:text="" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Ngày đến / Giờ đến -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginTop="14dp">
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Ngày đến"
+                app:startIconDrawable="@drawable/ic_calendar_24"
+                app:startIconTint="@android:color/black">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtDate"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="15/09/2025"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="12dp"
+                android:layout_height="wrap_content"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Giờ đến"
+                app:startIconDrawable="@drawable/ic_time_24"
+                app:startIconTint="@android:color/black">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtTime"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="10:00"/>
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Ghi chú"
+            app:startIconDrawable="@drawable/ic_note_24"
+            app:startIconTint="@android:color/black"
+            app:placeholderText="Ví dụ: Bàn gần cửa sổ, có ghế trẻ em">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edtNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minLines="3"
+                android:gravity="top|start"
+                android:inputType="textMultiLine"/>
+        </com.google.android.material.textfield.TextInputLayout>
+        <!-- Thông tin người đặt -->
+        <TextView
+            android:id="@+id/tvCustomerInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Thông tin người đặt"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:paddingTop="16dp"
+            android:paddingBottom="6dp"/>
+
+        <!-- Phone -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Số điện thoại"
+            app:startIconDrawable="@drawable/ic_phone_24"
+            app:startIconTint="@android:color/black"
+            app:placeholderText="ví dụ: 0969661804">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edtPhone"
+                android:inputType="phone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- EMAIL -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Email"
+            app:startIconDrawable="@drawable/ic_mail_24"
+            app:startIconTint="@android:color/black"
+            app:placeholderText="ví dụ: linh@example.com">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edtEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textEmailAddress"/>
+        </com.google.android.material.textfield.TextInputLayout>
+        <!-- TÊN LIÊN HỆ -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Tên liên hệ"
+            app:startIconDrawable="@drawable/ic_person_24"
+            app:startIconTint="@android:color/black"
+            app:placeholderText="Ví dụ: Trương Thùy Linh">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edtContactName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPersonName"/>
+        </com.google.android.material.textfield.TextInputLayout>
+        <!-- Nút tiếp tục -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnContinue"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="18dp"
+            android:text="Tiếp tục"
+            android:textAllCaps="false"
+            android:textStyle="bold"
+            android:letterSpacing="0.02"
+            android:elevation="2dp"
+            android:backgroundTint="#FF3B30"
+            android:textColor="@android:color/white"
+            app:cornerRadius="14dp"/>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
