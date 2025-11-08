@@ -1,0 +1,6 @@
+<resources>
+    <string name="admin_nav_home">Trang chủ</string>
+    <string name="admin_nav_reservations">Quản lý đặt chỗ</string>
+    <string name="admin_nav_users">Người dùng</string>
+    <string name="admin_nav_account">Đăng xuất</string>
+</resources>

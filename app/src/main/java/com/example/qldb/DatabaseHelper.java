@@ -25,7 +25,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     // Tên file CSDL & phiên bản
     private static final String DATABASE_NAME = "restaurant.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -79,7 +79,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 "table_id INTEGER," +                    // có thể null (chưa gán bàn)
                 "reservation_date TEXT NOT NULL," +      // dạng đề xuất: dd/MM/yyyy
                 "time_slot TEXT NOT NULL," +             // dạng đề xuất: HH:mm
-                "num_people INTEGER NOT NULL CHECK (num_people > 0)," +
+                "num_adults INTEGER NOT NULL DEFAULT 1," +    // ⭐️ THÊM DÒNG NÀY
+                "num_children INTEGER NOT NULL DEFAULT 0," +  // ⭐️ THÊM DÒNG NÀY
                 "status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed'))," +
                 "notes TEXT," +
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
@@ -252,7 +253,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
      * @param tableId          có thể null (chưa gán bàn)
      * @param reservationDate  ngày (khuyến nghị dạng dd/MM/yyyy)
      * @param timeSlot         giờ (HH:mm)
-     * @param numPeople        tổng số khách (NL + TE)
+     * @param numAdults        tổng số khách (NL + TE)
      * @param notes            ghi chú của khách
      * @return reservation_id mới tạo
      */
@@ -260,7 +261,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                                          Integer tableId,
                                          String reservationDate,
                                          String timeSlot,
-                                         int numPeople,
+                                         int numAdults,   // Tham số ĐÚNG
+                                         int numChildren, // Tham số ĐÚNG
                                          String notes) {
         SQLiteDatabase db = getWritableDatabase();
         long newId;
@@ -272,7 +274,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             if (tableId != null) cv.put("table_id", tableId);
             cv.put("reservation_date", reservationDate);
             cv.put("time_slot", timeSlot);
-            cv.put("num_people", numPeople);
+
+            // cv.put("num_people", numPeople); // ⭐️ XÓA DÒNG NÀY
+            cv.put("num_adults", numAdults);     // ⭐️ THÊM DÒNG NÀY
+            cv.put("num_children", numChildren); // ⭐️ THÊM DÒNG NÀY
+
             cv.put("status", ReservationStatus.PENDING.getValue());
             cv.put("notes", notes);
             newId = db.insertOrThrow("Reservations", null, cv);
@@ -293,7 +299,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         return newId;
     }
-
     /**
      * Cập nhật trạng thái đơn và ghi log lịch sử.
      *
@@ -341,47 +346,43 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     /**
      * Lấy danh sách đơn đặt chỗ theo user_id (mới nhất trước).
      */
+// ⭐️ THAY THẾ HÀM NÀY
     public List<ReservationModel> getReservationsByUser(int userId) {
         List<ReservationModel> out = new ArrayList<>();
         SQLiteDatabase db = getReadableDatabase();
+
+        // ⭐️ SỬA QUERY: Lấy num_adults, num_children
         Cursor c = db.rawQuery(
-                "SELECT reservation_id, user_id, table_id, reservation_date, time_slot, num_people, status, notes " +
+                "SELECT reservation_id, user_id, table_id, reservation_date, time_slot, " +
+                        "num_adults, num_children, status, notes " + // ⭐️ SỬA Ở ĐÂY
                         "FROM Reservations WHERE user_id=? ORDER BY reservation_id DESC",
                 new String[]{ String.valueOf(userId) });
 
         while (c.moveToNext()) {
             long id = c.getLong(0);
-            String date = c.getString(3);          // reservation_date
-            String time = c.getString(4);          // time_slot
-            int people = c.getInt(5);              // tổng số người (adult + child)
-            String statusStr = c.getString(6);     // trạng thái
-            String notes = c.getString(7);         // ghi chú (dùng tạm cho contactName)
+            String date = c.getString(3);
+            String time = c.getString(4);
 
-            // ⚡ Giả định toàn bộ là người lớn, không có trẻ em — hoặc chia tạm
-            int adult = people;
-            int child = 0;
+            // ⭐️ SỬA INDEX
+            int adult = c.getInt(5);
+            int child = c.getInt(6);
+            String statusStr = c.getString(7);
+            String notes = c.getString(8);
 
-            // ⚡ Nếu bạn muốn hiển thị số điện thoại/tên người đặt, có thể JOIN bảng Users để lấy, tạm thời để trống
-            String phone = "";
-            String contactName = "";
+            // ⭐️ Lấy thông tin user (tạm thời)
+            UserModel u = getUserById(userId);
+            String phone = (u != null) ? u.phone : "";
+            String contactName = (u != null) ? u.fullName : "";
 
             out.add(new ReservationModel(
-                    id,
-                    date,
-                    time,
-                    adult,
-                    child,
-                    phone,
-                    contactName,
+                    id, date, time, adult, child, phone, contactName,
                     ReservationStatus.fromValue(statusStr)
             ));
         }
-
         c.close();
         db.close();
         return out;
     }
-
     // ==============================
     // HÀM NỘI BỘ (PRIVATE HELPERS)
     // ==============================
@@ -417,4 +418,216 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         c.close();
         return uid;
     }
+
+    // Thêm 2 hàm này vào lớp DatabaseHelper.java của bạn
+
+    /**
+     * Lấy role (admin/user) của user_id.
+     * @return "admin", "user", hoặc null nếu không tìm thấy.
+     */
+    public String getUserRole(int userId) {
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT role FROM Users WHERE user_id = ?",
+                new String[]{ String.valueOf(userId) }
+        );
+        String role = null;
+        if (c.moveToFirst()) {
+            role = c.getString(0);
+        }
+        c.close();
+        db.close();
+        return role;
+    }
+
+    /**
+     * Lấy TẤT CẢ đơn đặt chỗ (cho admin).
+     * Bao gồm cả thông tin người đặt (JOIN với Users).
+     */
+// ⭐️ THAY THẾ HÀM NÀY
+    public List<ReservationModel> getAllReservations() {
+        List<ReservationModel> out = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+
+        String query = "SELECT r.reservation_id, r.user_id, r.table_id, r.reservation_date, " +
+                "r.time_slot, " +
+                "r.num_adults, r.num_children, " + // ⭐️ SỬA Ở ĐÂY
+                "r.status, r.notes, u.full_name, u.phone " +
+                "FROM Reservations r " +
+                "JOIN Users u ON r.user_id = u.user_id " +
+                "ORDER BY r.reservation_id DESC";
+
+        Cursor c = db.rawQuery(query, null);
+
+        while (c.moveToNext()) {
+            long id = c.getLong(0);
+            String date = c.getString(3);
+            String time = c.getString(4);
+
+            // ⭐️ SỬA INDEX
+            int adult = c.getInt(5);
+            int child = c.getInt(6);
+            String statusStr = c.getString(7);
+            String notes = c.getString(8);
+            String contactName = c.getString(9);
+            String phone = c.getString(10);
+
+            out.add(new ReservationModel(
+                    id, date, time, adult, child, phone, contactName,
+                    ReservationStatus.fromValue(statusStr)
+            ));
+        }
+        c.close();
+        db.close();
+        return out;
+    }
+    // Thêm 3 hàm này vào DatabaseHelper.java
+
+    /**
+     * Đếm số lượng đơn theo trạng thái (cho admin dashboard)
+     */
+    public int getCountOfReservationsByStatus(String status) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT COUNT(*) FROM Reservations WHERE status = ?",
+                new String[]{status}
+        );
+        int count = 0;
+        if (cursor.moveToFirst()) {
+            count = cursor.getInt(0);
+        }
+        cursor.close();
+        db.close();
+        return count;
+    }
+
+    /**
+     * Đếm số lượng bàn theo trạng thái (cho admin dashboard)
+     */
+    public int getCountOfTablesByStatus(String status) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT COUNT(*) FROM Tables WHERE status = ?",
+                new String[]{status}
+        );
+        int count = 0;
+        if (cursor.moveToFirst()) {
+            count = cursor.getInt(0);
+        }
+        cursor.close();
+        db.close();
+        return count;
+    }
+
+    // Thêm hàm này vào file DatabaseHelper.java
+
+    /**
+     * Lấy danh sách đơn đặt chỗ dựa trên một LIST các trạng thái.
+     */
+    public List<ReservationModel> getReservationsByStatusList(List<String> statuses) {
+        List<ReservationModel> out = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+
+        // Xây dựng mệnh đề WHERE IN (...) cho linh hoạt
+        // Ví dụ: "WHERE r.status IN (?, ?)"
+        StringBuilder whereClause = new StringBuilder();
+        for (int i = 0; i < statuses.size(); i++) {
+            whereClause.append("?");
+            if (i < statuses.size() - 1) {
+                whereClause.append(",");
+            }
+        }
+        String[] statusArray = statuses.toArray(new String[0]);
+
+        // ⭐️ SỬA QUERY: Lấy num_adults và num_children
+        String query = "SELECT r.reservation_id, r.user_id, r.table_id, r.reservation_date, " +
+                "r.time_slot, " +
+                "r.num_adults, r.num_children, " + // ⭐️ THAY VÌ num_people
+                "r.status, r.notes, u.full_name, u.phone " +
+                "FROM Reservations r " +
+                "JOIN Users u ON r.user_id = u.user_id " +
+                "WHERE r.status IN (" + whereClause.toString() + ") " +
+                "ORDER BY r.reservation_id DESC";
+
+        Cursor c = db.rawQuery(query, statusArray);
+
+        while (c.moveToNext()) {
+            long id = c.getLong(0);
+            String date = c.getString(3);
+            String time = c.getString(4);
+
+            // ⭐️ SỬA INDEX: Lấy 2 cột riêng biệt
+            int adult = c.getInt(5); // index 5 là num_adults
+            int child = c.getInt(6); // index 6 là num_children
+
+            // ⭐️ SỬA INDEX: Các cột sau bị dịch đi 1
+            String statusStr = c.getString(7);
+            String notes = c.getString(8);
+            String contactName = c.getString(9);
+            String phone = c.getString(10);
+
+            // ⭐️ Đưa thẳng vào model
+            out.add(new ReservationModel(
+                    id, date, time, adult, child, phone, contactName,
+                    ReservationStatus.fromValue(statusStr)
+            ));
+        }
+        c.close();
+        db.close();
+        return out;
+    }
+    // Thêm hàm này vào file DatabaseHelper.java
+
+    /**
+     * Xóa vĩnh viễn một đơn đặt chỗ và lịch sử liên quan.
+     * Dùng cho admin khi muốn xóa hẳn đơn.
+     */
+    public void deleteReservation(long reservationId) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            // 1) Xóa các mục trong lịch sử trước (vì có khóa ngoại)
+            db.delete(
+                    "Reservation_History",
+                    "reservation_id = ?",
+                    new String[]{ String.valueOf(reservationId) }
+            );
+
+            // 2) Xóa đơn đặt chỗ chính
+            db.delete(
+                    "Reservations",
+                    "reservation_id = ?",
+                    new String[]{ String.valueOf(reservationId) }
+            );
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+            db.close();
+        }
+    }
+    // ⭐️ THÊM HÀM MỚI NÀY VÀO CUỐI FILE
+    /**
+     * Lấy danh sách TẤT CẢ người dùng (không phải admin).
+     * Dùng cho trang "Người dùng" của Admin.
+     */
+    public List<UserModel> getAllUsers() {
+        List<UserModel> userList = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+
+        // Chỉ lấy những ai có role = 'user'
+        Cursor c = db.rawQuery(
+                "SELECT user_id, full_name, phone FROM Users WHERE role = 'user' ORDER BY full_name",
+                null
+        );
+
+        while (c.moveToNext()) {
+            UserModel u = new UserModel(c.getInt(0), c.getString(1), c.getString(2));
+            userList.add(u);
+        }
+        c.close();
+        db.close();
+        return userList;
+    }
+
 }
