@@ -5,11 +5,15 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Lớp trợ giúp làm việc với SQLite:
@@ -26,6 +30,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     // Tên file CSDL & phiên bản
     private static final String DATABASE_NAME = "restaurant.db";
     private static final int DATABASE_VERSION = 4;
+    private static final String TABLE_RESERVATIONS = "Reservations";
+    private static final String COLUMN_TABLE_STATUS = "status"; // Tên cột status trong bảng Tables
+    private static final String TABLE_TABLES = "Tables";
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -114,9 +121,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("INSERT INTO Users (full_name, phone, password_hash, role) " +
                 "VALUES ('Nguyễn Mai Hương', '0123456789', '" + userPassword + "', 'user')");
 
-        // Thêm 2 bàn mẫu
-        db.execSQL("INSERT INTO Tables (table_name, capacity, status) VALUES ('Table 1', 4, 'available')");
-        db.execSQL("INSERT INTO Tables (table_name, capacity, status) VALUES ('Table 2', 6, 'available')");
+        for (int i = 1; i <= 30; i++) {
+            ContentValues tableValues = new ContentValues();
+            tableValues.put("table_name", "Bàn " + i);
+            tableValues.put("capacity", 4); // Bạn có thể đặt capacity mặc định
+            tableValues.put("status", "available");
+            db.insert("Tables", null, tableValues); // "Tables" là tên bảng của bạn
+        }
     }
 
     /**
@@ -220,7 +231,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             userId = cursor.getInt(0);
         }
         cursor.close();
-        db.close();
         return userId;
     }
 
@@ -238,25 +248,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             u = new UserModel(c.getInt(0), c.getString(1), c.getString(2));
         }
         c.close();
-        db.close();
         return u;
     }
 
-    // ===========================================
-    // KHU VỰC HÀM CHO RESERVATIONS (ĐẶT CHỖ)
-    // ===========================================
 
-    /**
-     * Thêm 1 đơn đặt chỗ trạng thái PENDING, đồng thời ghi log vào Reservation_History.
-     *
-     * @param userId           người đặt
-     * @param tableId          có thể null (chưa gán bàn)
-     * @param reservationDate  ngày (khuyến nghị dạng dd/MM/yyyy)
-     * @param timeSlot         giờ (HH:mm)
-     * @param numAdults        tổng số khách (NL + TE)
-     * @param notes            ghi chú của khách
-     * @return reservation_id mới tạo
-     */
+
     public long insertReservationPending(int userId,
                                          Integer tableId,
                                          String reservationDate,
@@ -295,55 +291,108 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
-            db.close();
         }
         return newId;
     }
+
+
+    // ⭐️ THÊM HÀM MỚI NÀY (Hàm private hỗ trợ)
     /**
-     * Cập nhật trạng thái đơn và ghi log lịch sử.
+     * Tìm bàn "available" ĐẦU TIÊN, cập nhật trạng thái của nó sang "reserved",
+     * và trả về ID của bàn đó.
+     * CHỈ NÊN GỌI TỪ BÊN TRONG MỘT TRANSACTION.
      *
-     * @param reservationId   id đơn
-     * @param newStatus       trạng thái mới (PENDING/CONFIRMED/CANCELLED/COMPLETED)
-     * @param changedByUserId ai thực hiện thay đổi (user/admin); có thể null
+     * @param db Đối tượng SQLiteDatabase đang trong transaction.
+     * @return table_id nếu gán thành công, -1 nếu hết bàn trống.
      */
-    public void updateReservationStatus(long reservationId,
-                                        ReservationStatus newStatus,
-                                        Integer changedByUserId) {
-        SQLiteDatabase db = getWritableDatabase();
-        db.beginTransaction();
-        try {
-            // 1) Update trạng thái trong bảng Reservations
-            ContentValues cv = new ContentValues();
-            cv.put("status", newStatus.getValue());
+    private int assignFirstAvailableTable(SQLiteDatabase db) {
+        Cursor cursor = db.rawQuery(
+                "SELECT table_id FROM " + TABLE_TABLES +
+                        " WHERE " + COLUMN_TABLE_STATUS + " = 'available' LIMIT 1",
+                null
+        );
 
-            // Nếu là CONFIRMED, lưu thêm người & thời điểm xác nhận
-            if (newStatus == ReservationStatus.CONFIRMED && changedByUserId != null) {
-                cv.put("confirmed_by", changedByUserId);
-                // Ghi thời điểm xác nhận (ở đây demo là dùng millis -> INTEGER; bạn có thể chuyển sang CURRENT_TIMESTAMP nếu thích TEXT)
-                cv.put("confirmed_at", System.currentTimeMillis());
-            }
-
-            db.update("Reservations", cv, "reservation_id=?",
-                    new String[]{ String.valueOf(reservationId) });
-
-            // 2) Ghi history (cần user_id chủ đơn)
-            int ownerUserId = getReservationUserIdUnsafe(db, reservationId);
-            insertReservationHistoryInternal(
-                    db,
-                    (int) reservationId,
-                    ownerUserId,
-                    newStatus.getValue(),
-                    changedByUserId
-            );
-
-            db.setTransactionSuccessful();
-        } finally {
-            db.endTransaction();
-            db.close();
+        int tableId = -1;
+        if (cursor.moveToFirst()) {
+            tableId = cursor.getInt(0);
         }
+        cursor.close();
+
+        if (tableId != -1) {
+            // Đã tìm thấy bàn. Cập nhật trạng thái của bàn đó sang "reserved"
+            ContentValues tableCv = new ContentValues();
+            tableCv.put(COLUMN_TABLE_STATUS, "reserved"); // Hoặc "occupied" tùy logic của bạn
+            db.update(TABLE_TABLES, tableCv, "table_id = ?", new String[]{String.valueOf(tableId)});
+        }
+        return tableId; // Trả về -1 nếu không tìm thấy bàn nào (hết bàn)
     }
 
-    /**
+
+    public boolean updateReservationStatus(int reservationId, ReservationStatus newStatus, int adminId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // ⭐️ TRƯỜNG HỢP 1: Nếu trạng thái mới KHÔNG PHẢI LÀ "CONFIRMED"
+        // (Ví dụ: Hủy, Đã ăn xong, v.v. - không cần chiếm bàn)
+        if (newStatus != ReservationStatus.CONFIRMED) {
+            ContentValues values = new ContentValues();
+            values.put("status", newStatus.getValue());   // ⭐️ SỬA: "status"
+            values.put("confirmed_by", adminId);          // ⭐️ SỬA: "confirmed_by"
+
+            db.update(TABLE_RESERVATIONS, values, "reservation_id = ?", new String[]{String.valueOf(reservationId)}); // ⭐️ SỬA: "reservation_id"
+            // Vì không cần chiếm bàn, nên luôn thành công
+            return true;
+        }
+
+        // ⭐️ TRƯỜNG HỢP 2: Trạng thái mới là "CONFIRMED" - Logic quan trọng nhất
+        db.beginTransaction();
+        try {
+            // Bước 1: Tìm một bàn trống (status = "available")
+            Cursor cursor = db.query(TABLE_TABLES,
+                    new String[]{"table_id"},                       // ⭐️ SỬA: "table_id"
+                    COLUMN_TABLE_STATUS + " = ?",                   // ⭐️ SỬA: COLUMN_TABLE_STATUS (bạn có định nghĩa biến này)
+                    new String[]{"available"},                      // là "available"
+                    null, null, null,
+                    "1");                                           // Chỉ lấy 1 bàn
+
+            String availableTableId = null;
+            if (cursor != null && cursor.moveToFirst()) {
+                availableTableId = cursor.getString(cursor.getColumnIndexOrThrow("table_id")); // ⭐️ SỬA: "table_id"
+                cursor.close();
+            }
+
+            // Bước 2: Kiểm tra xem có tìm được bàn không
+            if (availableTableId == null) {
+                // KHÔNG CÒN BÀN TRỐNG!
+                Log.w("DatabaseHelper", "Confirm failed: No available tables.");
+                return false; // Báo cho Fragment biết là đã thất bại
+            }
+
+            // Bước 3: Vẫn còn bàn. Cập nhật bảng Reservations
+            ContentValues reservationValues = new ContentValues();
+            reservationValues.put("status", ReservationStatus.CONFIRMED.getValue()); // ⭐️ SỬA: "status"
+            reservationValues.put("confirmed_by", adminId);                        // ⭐️ SỬA: "confirmed_by"
+            reservationValues.put("table_id", availableTableId);                   // ⭐️ SỬA: "table_id"
+
+            db.update(TABLE_RESERVATIONS, reservationValues, "reservation_id = ?", new String[]{String.valueOf(reservationId)}); // ⭐️ SỬA: "reservation_id"
+
+            // Bước 4: Cập nhật bảng Tables (Chuyển bàn từ "available" -> "occupied")
+            ContentValues tableValues = new ContentValues();
+            // (Lưu ý: status của bảng Tables là "occupied" - bị chiếm, khác với "confirmed" của đơn hàng)
+            tableValues.put(COLUMN_TABLE_STATUS, "occupied"); // ⭐️ SỬA: COLUMN_TABLE_STATUS và "occupied"
+
+            db.update(TABLE_TABLES, tableValues, "table_id = ?", new String[]{availableTableId}); // ⭐️ SỬA: "table_id"
+
+            // Bước 5: Đánh dấu transaction thành công
+            db.setTransactionSuccessful();
+            return true; // Báo thành công
+
+        } catch (Exception e) {
+            Log.e("DatabaseHelper", "Error during confirm transaction", e);
+            return false; // Báo thất bại
+        } finally {
+            db.endTransaction(); // Hoàn tất transaction (commit hoặc rollback)
+        }
+    }    /**
      * Lấy danh sách đơn đặt chỗ theo user_id (mới nhất trước).
      */
 // ⭐️ THAY THẾ HÀM NÀY
@@ -380,7 +429,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             ));
         }
         c.close();
-        db.close();
         return out;
     }
     // ==============================
@@ -436,7 +484,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             role = c.getString(0);
         }
         c.close();
-        db.close();
         return role;
     }
 
@@ -478,7 +525,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             ));
         }
         c.close();
-        db.close();
         return out;
     }
     // Thêm 3 hàm này vào DatabaseHelper.java
@@ -497,7 +543,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             count = cursor.getInt(0);
         }
         cursor.close();
-        db.close();
         return count;
     }
 
@@ -515,7 +560,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             count = cursor.getInt(0);
         }
         cursor.close();
-        db.close();
         return count;
     }
 
@@ -573,7 +617,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             ));
         }
         c.close();
-        db.close();
         return out;
     }
     // Thêm hàm này vào file DatabaseHelper.java
@@ -603,7 +646,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
-            db.close();
         }
     }
     // ⭐️ THÊM HÀM MỚI NÀY VÀO CUỐI FILE
@@ -626,8 +668,171 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             userList.add(u);
         }
         c.close();
-        db.close();
         return userList;
     }
 
+    // Trong lớp DatabaseHelper.java
+
+    // 1. Phương thức xóa tất cả các đơn đặt bàn (ĐÃ SỬA)
+    public void clearAllReservations() {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // Bắt đầu transaction để đảm bảo cả 2 lệnh cùng thành công
+        db.beginTransaction();
+        try {
+            // BƯỚC 1: Xóa lịch sử trước (vì có khóa ngoại)
+            // (Giả sử tên bảng lịch sử của bạn là "Reservation_History"
+            // dựa trên file đầy đủ bạn gửi trước đó)
+            db.delete("Reservation_History", null, null);
+
+            // BƯỚC 2: Xóa bảng Reservations chính
+            db.delete(TABLE_RESERVATIONS, null, null);
+
+            // Đánh dấu transaction thành công
+            db.setTransactionSuccessful();
+        } finally {
+            // Kết thúc transaction (commit nếu successful, rollback nếu lỗi)
+            db.endTransaction();
+        }
+    }
+
+    // 2. Phương thức đặt lại (Hàm này đã ĐÚNG, không cần sửa)
+    public void resetAllTablesToAvailable() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_TABLE_STATUS, "available");
+
+        // Cập nhật TẤT CẢ các bàn trong bảng tables
+        db.update(TABLE_TABLES, values, null, null);
+
+    }
+
+    // Trong file DatabaseHelper.java
+    // HÃY XÓA HÀM CŨ 'completeReservation' VÀ THAY BẰNG HÀM NÀY
+
+    /**
+     * Hoàn thành và XÓA một đơn đặt chỗ:
+     * 1. Tìm bàn (table_id) đã gán cho đơn này.
+     * 2. Cập nhật trạng thái bàn đó -> "available" (trả bàn).
+     * 3. Xóa log lịch sử của đơn này (tránh lỗi khóa ngoại).
+     * 4. Xóa vĩnh viễn đơn hàng này.
+     *
+     * @param reservationId ID của đơn hàng
+     */
+    public void completeReservation(long reservationId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.beginTransaction();
+
+        int tableId = -1;
+
+        try {
+            // --- Bước 1: Lấy table_id từ đơn hàng ---
+            Cursor c = db.rawQuery(
+                    "SELECT table_id FROM " + TABLE_RESERVATIONS + " WHERE reservation_id = ?",
+                    new String[]{String.valueOf(reservationId)}
+            );
+            if (c.moveToFirst()) {
+                if (!c.isNull(0)) {
+                    tableId = c.getInt(0); // Lấy ID bàn
+                }
+            }
+            c.close();
+
+            // --- Bước 2: Cập nhật trạng thái bàn về "available" ---
+            if (tableId != -1) {
+                ContentValues tableCv = new ContentValues();
+                tableCv.put(COLUMN_TABLE_STATUS, "available");
+                db.update(TABLE_TABLES, tableCv, "table_id = ?", new String[]{String.valueOf(tableId)});
+            }
+
+            // --- Bước 3: Xóa log lịch sử trước (vì có khóa ngoại) ---
+            db.delete("Reservation_History", "reservation_id = ?", new String[]{String.valueOf(reservationId)});
+
+            // --- Bước 4: Xóa vĩnh viễn đơn hàng ---
+            db.delete(TABLE_RESERVATIONS, "reservation_id = ?", new String[]{String.valueOf(reservationId)});
+
+            db.setTransactionSuccessful();
+
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+
+    public boolean createOnSiteBooking(String guestName, String guestPhone, int numGuests, int adminUserId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.beginTransaction();
+        boolean success = false;
+
+        try {
+            // --- Bước 1: Tìm hoặc Tạo User ---
+            int guestUserId = -1;
+            Cursor c = db.query("Users", new String[]{"user_id"}, "phone = ?", new String[]{guestPhone}, null, null, null);
+
+            if (c.moveToFirst()) {
+                guestUserId = c.getInt(0); // User đã tồn tại
+            }
+            c.close();
+
+            if (guestUserId == -1) {
+                // User mới, tạo tài khoản
+                ContentValues userCv = new ContentValues();
+                userCv.put("full_name", guestName);
+                userCv.put("phone", guestPhone);
+                userCv.put("password_hash", hashPassword("123456")); // Mật khẩu mặc định
+                userCv.put("role", "user");
+                guestUserId = (int) db.insertOrThrow("Users", null, userCv);
+            }
+
+            if (guestUserId == -1) {
+                // Không thể tạo user, rollback
+                throw new Exception("Không thể tạo user");
+            }
+
+            // --- Bước 2: Gán bàn ---
+            int tableId = assignFirstAvailableTable(db); // Hàm này đã set bàn thành 'reserved'
+            if (tableId == -1) {
+                // Hết bàn trống, rollback
+                db.endTransaction();
+                return false; // Báo hiệu thất bại
+            }
+
+            // --- Bước 3: Tạo Reservation (Đơn) ---
+            ContentValues resCv = new ContentValues();
+            resCv.put("user_id", guestUserId);
+            resCv.put("table_id", tableId);
+
+            // Lấy ngày giờ hiện tại
+            SimpleDateFormat sdfDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+            SimpleDateFormat sdfTime = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            String currentDate = sdfDate.format(new Date());
+            String currentTime = sdfTime.format(new Date());
+
+            resCv.put("reservation_date", currentDate);
+            resCv.put("time_slot", currentTime);
+            resCv.put("num_adults", numGuests);
+            resCv.put("num_children", 0);
+            resCv.put("status", ReservationStatus.ON_SITE.getValue()); // ⭐️ Trạng thái MỚI
+            resCv.put("notes", "Khách vãng lai");
+            resCv.put("confirmed_by", adminUserId);
+            resCv.put("confirmed_at", System.currentTimeMillis());
+
+            long newResId = db.insertOrThrow(TABLE_RESERVATIONS, null, resCv);
+
+            // --- Bước 4: Ghi History ---
+            insertReservationHistoryInternal(db, (int) newResId, guestUserId, ReservationStatus.ON_SITE.getValue(), adminUserId);
+
+            db.setTransactionSuccessful();
+            success = true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            success = false;
+        } finally {
+            db.endTransaction();
+            // Không gọi db.close()
+        }
+        return success;
+    }
 }
+

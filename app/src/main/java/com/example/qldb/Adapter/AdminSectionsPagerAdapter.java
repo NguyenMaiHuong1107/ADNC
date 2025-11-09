@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
+import com.example.qldb.ActiVity.AdminOnSiteFragment; // ⭐️ IMPORT MỚI
 import com.example.qldb.ActiVity.ReservationListFragment;
 import com.example.qldb.ReservationStatus;
 
@@ -19,29 +20,37 @@ public class AdminSectionsPagerAdapter extends FragmentStateAdapter {
     @NonNull
     @Override
     public Fragment createFragment(int position) {
-        // position 0: Tab "Đơn chờ xác nhận"
-        if (position == 0) {
-            // Chỉ lấy đơn PENDING
-            ArrayList<String> pendingStatus = new ArrayList<>(
-                    Arrays.asList(ReservationStatus.PENDING.getValue())
-            );
-            return ReservationListFragment.newInstance(pendingStatus);
+        switch (position) {
+            case 0:
+                // Tab "Đơn chờ xác nhận"
+                ArrayList<String> pendingStatus = new ArrayList<>();
+                pendingStatus.add(ReservationStatus.PENDING.getValue());
+                return ReservationListFragment.newInstance(pendingStatus);
+            case 1:
+                // Tab "Đơn đã xử lý"
+                // Chỉ hiển thị các đơn đang "active" (Đã xác nhận, Tại quán)
+                // Các đơn COMPLETED hoặc CANCELLED sẽ tự biến mất
+                ArrayList<String> processedStatuses = new ArrayList<>(
+                        Arrays.asList(
+                                ReservationStatus.CONFIRMED.getValue(),
+                                ReservationStatus.ON_SITE.getValue()
+                        )
+                );
+                return ReservationListFragment.newInstance(processedStatuses);
+            case 2:
+                // ⭐️ TAB MỚI: "Ăn tại quán" (Form để nhập)
+                return new AdminOnSiteFragment();
+            default:
+                // Trả về fragment "chờ" làm mặc định an toàn
+                ArrayList<String> defaultStatus = new ArrayList<>();
+                defaultStatus.add(ReservationStatus.PENDING.getValue());
+                return ReservationListFragment.newInstance(defaultStatus);
         }
-
-        // position 1: Tab "Đơn đã xác nhận"
-        // Lấy đơn CONFIRMED và COMPLETED
-        ArrayList<String> confirmedStatuses = new ArrayList<>(
-                Arrays.asList(
-                        ReservationStatus.CONFIRMED.getValue(),
-                        ReservationStatus.COMPLETED.getValue(),
-                        ReservationStatus.CANCELLED.getValue() // Bạn cũng có thể muốn xem đơn đã hủy
-                )
-        );
-        return ReservationListFragment.newInstance(confirmedStatuses);
     }
 
     @Override
     public int getItemCount() {
-        return 2; // Chúng ta có 2 tab
+        // ⭐️ SỬA: Trả về 3 (vì có 3 tab)
+        return 3;
     }
 }

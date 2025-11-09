@@ -23,6 +23,7 @@ import com.example.qldb.ReservationStatus;
 import java.util.ArrayList;
 import java.util.List;
 
+// ⭐️ Đảm bảo Fragment implements HÀM MỚI trong interface
 public class ReservationListFragment extends Fragment implements AdminReservationAdapter.OnActionClickListener {
 
     private static final String ARG_STATUSES = "statuses";
@@ -33,9 +34,6 @@ public class ReservationListFragment extends Fragment implements AdminReservatio
     private List<ReservationModel> reservationList;
     private ArrayList<String> statusesToShow;
 
-    /**
-     * Tạo Fragment mới và truyền danh sách trạng thái (ví dụ: ["pending"])
-     */
     public static ReservationListFragment newInstance(ArrayList<String> statuses) {
         ReservationListFragment fragment = new ReservationListFragment();
         Bundle args = new Bundle();
@@ -63,99 +61,117 @@ public class ReservationListFragment extends Fragment implements AdminReservatio
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         lvReservations = view.findViewById(R.id.lvReservations);
-
-        // Sẽ được gọi lại trong onResume, nhưng gọi 1 lần ở đây để tải lần đầu
+        // Tải lần đầu (sẽ được gọi lại trong onResume)
         loadReservations();
     }
 
-    // ⭐️ FIX 1: THÊM LẠI onResume ĐỂ TỰ ĐỘNG LÀM MỚI
     @Override
     public void onResume() {
         super.onResume();
-
-        // Kiểm tra xem view đã được tạo chưa trước khi tải
-        // Điều này đảm bảo list tự làm mới khi chuyển tab hoặc sau khi
-        // xác nhận/xóa
         if (getView() != null) {
             loadReservations();
         }
     }
 
-
+    // ⭐️ SỬA HÀM NÀY
     private void loadReservations() {
         if (statusesToShow == null || statusesToShow.isEmpty()) return;
-        if (getContext() == null) return; // Tránh crash nếu context null
+        if (getContext() == null) return;
 
-        // Lấy data từ DB theo trạng thái đã truyền
         reservationList = dbHelper.getReservationsByStatusList(statusesToShow);
 
-        // Nếu trạng thái là PENDING, hiện nút
-        boolean showActions = statusesToShow.contains(ReservationStatus.PENDING.getValue());
+        // ⭐️ XÁC ĐỊNH LOẠI NÚT CẦN HIỂN THỊ
+        // 1. Hiện nút Confirm/Cancel (✓/✗) nếu tab này là "Chờ xác nhận"
+        boolean showPending = statusesToShow.contains(ReservationStatus.PENDING.getValue());
 
-        adapter = new AdminReservationAdapter(getContext(), reservationList, showActions);
+        // 2. Hiện nút "Ăn xong" nếu tab này là "Đã xử lý" (chứa đơn Confirmed và On-site)
+        boolean showFinish = statusesToShow.contains(ReservationStatus.CONFIRMED.getValue())
+                || statusesToShow.contains(ReservationStatus.ON_SITE.getValue());
 
-        // Chỉ set listener nếu chúng ta hiện nút
-        if (showActions) {
-            adapter.setOnActionClickListener(this);
-        }
+        // ⭐️ GỌI CONSTRUCTOR MỚI CỦA ADAPTER
+        adapter = new AdminReservationAdapter(getContext(), reservationList, showPending, showFinish);
+
+        // Luôn set listener (adapter sẽ tự xử lý nút nào được bấm)
+        adapter.setOnActionClickListener(this);
 
         lvReservations.setAdapter(adapter);
     }
 
-    // --- Đây là logic xử lý khi bấm (✓) hoặc (✗) ---
+    // --- Logic xử lý khi bấm nút ---
 
     @Override
     public void onConfirmClick(ReservationModel reservation) {
+        // (Giữ nguyên code cũ của bạn)
         showConfirmationDialog(reservation, ReservationStatus.CONFIRMED, "Xác nhận đơn này?");
     }
 
     @Override
     public void onCancelClick(ReservationModel reservation) {
-        // Dòng này sẽ gọi dialog HỎI XÓA
+        // (Giữ nguyên code cũ của bạn)
         showDeleteDialog(reservation);
     }
 
-    // ⭐️ FIX 2: SỬA LẠI LOGIC NÚT "XÓA"
-    private void showDeleteDialog(ReservationModel reservation) {
-        if (getContext() == null) return; // Tránh crash
+    // ⭐️ THÊM HÀM MỚI NÀY (XỬ LÝ NÚT "ĂN XONG")
+    @Override
+    public void onFinishClick(ReservationModel reservation) {
+        // Hiển thị dialog xác nhận "Khách đã ăn xong"
+        if (getContext() == null) return;
 
+        new AlertDialog.Builder(getContext())
+                .setTitle("Hoàn thành đơn")
+                .setMessage("Xác nhận khách tại đơn " + reservation.id + " đã ăn xong và trả bàn?")
+                .setPositiveButton("Đồng ý", (dialog, which) -> {
+                    finishDining(reservation); // Gọi hàm helper để xử lý
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    // ⭐️ THÊM HÀM HELPER NÀY
+    private void finishDining(ReservationModel reservation) {
+        try {
+            // Gọi hàm mới trong DatabaseHelper
+            dbHelper.completeReservation(reservation.id);
+            Toast.makeText(getContext(), "Đã hoàn thành đơn " + reservation.id, Toast.LENGTH_SHORT).show();
+
+            // Tải lại danh sách (đơn này sẽ biến mất khỏi tab "Đã xử lý")
+            loadReservations();
+
+        } catch (Exception e) {
+            Toast.makeText(getContext(), "Lỗi khi hoàn thành đơn", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }
+
+    // (Hàm showDeleteDialog và deleteReservation của bạn giữ nguyên)
+    private void showDeleteDialog(ReservationModel reservation) {
+        if (getContext() == null) return;
         new AlertDialog.Builder(getContext())
                 .setTitle("Xóa đơn: ".concat(String.valueOf(reservation.id)))
                 .setMessage("Bạn có chắc muốn XÓA vĩnh viễn đơn này?\nKhách: " + reservation.getContactInfo())
                 .setPositiveButton("Xóa", (dialog, which) -> {
-                    // Gọi hàm helper "deleteReservation" ngay bên dưới
-                    // (Không gọi dbHelper.deleteReservation)
                     deleteReservation(reservation);
                 })
                 .setNegativeButton("Không", null)
-                .setIcon(android.R.drawable.ic_dialog_alert) // Thêm icon cảnh báo
+                .setIcon(android.R.drawable.ic_dialog_alert)
                 .show();
     }
 
-    /**
-     * Hàm helper này thực thi việc xóa
-     */
     private void deleteReservation(ReservationModel reservation) {
         try {
-            // Gọi hàm xóa trong DB (mà chúng ta đã thêm vào DatabaseHelper)
             dbHelper.deleteReservation(reservation.id);
             Toast.makeText(getContext(), "Đã xóa đơn " + reservation.id, Toast.LENGTH_SHORT).show();
-
-            // Tải lại danh sách ngay lập tức
             loadReservations();
-
         } catch (Exception e) {
             Toast.makeText(getContext(), "Lỗi khi xóa", Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
     }
 
-    /**
-     * Hàm này dùng để Xác nhận (nút ✓)
-     */
-    private void showConfirmationDialog(ReservationModel reservation, ReservationStatus newStatus, String message) {
-        if (getContext() == null) return; // Tránh crash
 
+    // (Hàm showConfirmationDialog của bạn giữ nguyên)
+    private void showConfirmationDialog(ReservationModel reservation, ReservationStatus newStatus, String message) {
+        if (getContext() == null) return;
         new AlertDialog.Builder(getContext())
                 .setTitle("Xử lý đơn: ".concat(String.valueOf(reservation.id)))
                 .setMessage(message + "\nKhách: " + reservation.getContactInfo())
@@ -166,6 +182,7 @@ public class ReservationListFragment extends Fragment implements AdminReservatio
                 .show();
     }
 
+    // ⭐️ HÀM NÀY PHẢI GIỮ LẠI BẢN SỬA (CÓ 'boolean success') MÀ CHÚNG TA LÀM TRƯỚC ĐÓ
     private void updateStatus(ReservationModel reservation, ReservationStatus newStatus) {
         int adminUserId = getAdminUserId();
         if (adminUserId == -1) {
@@ -174,11 +191,14 @@ public class ReservationListFragment extends Fragment implements AdminReservatio
         }
 
         try {
-            dbHelper.updateReservationStatus(reservation.id, newStatus, adminUserId);
-            Toast.makeText(getContext(), "Đã " + newStatus.name(), Toast.LENGTH_SHORT).show();
+            boolean success = dbHelper.updateReservationStatus((int) reservation.id, newStatus, adminUserId);
 
-            // Tải lại danh sách ngay lập tức
-            loadReservations();
+            if (success) {
+                Toast.makeText(getContext(), "Đã " + newStatus.name(), Toast.LENGTH_SHORT).show();
+                loadReservations();
+            } else {
+                Toast.makeText(getContext(), "Xác nhận thất bại! Đã hết bàn trống.", Toast.LENGTH_LONG).show();
+            }
 
         } catch (Exception e) {
             Toast.makeText(getContext(), "Lỗi khi cập nhật", Toast.LENGTH_SHORT).show();
@@ -186,8 +206,9 @@ public class ReservationListFragment extends Fragment implements AdminReservatio
         }
     }
 
+    // (Hàm getAdminUserId của bạn giữ nguyên)
     private int getAdminUserId() {
-        if (getActivity() == null) return -1; // Tránh crash
+        if (getActivity() == null) return -1;
         SharedPreferences prefs = getActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE);
         return prefs.getInt("user_id", -1);
     }

@@ -16,8 +16,6 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 public class AdminReservationsFragment extends Fragment {
 
-    // File này không cần onResume hay loadReservations
-
     private AdminSectionsPagerAdapter adminSectionsPagerAdapter;
     private ViewPager2 viewPager;
     private TabLayout tabLayout;
@@ -25,7 +23,6 @@ public class AdminReservationsFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // Inflate layout mới có TabLayout và ViewPager2
         return inflater.inflate(R.layout.fragment_admin_reservations, container, false);
     }
 
@@ -39,13 +36,19 @@ public class AdminReservationsFragment extends Fragment {
 
         viewPager.setAdapter(adminSectionsPagerAdapter);
 
-        // Liên kết Tab và ViewPager
+        // ⭐️ SỬA LẠI LOGIC NÀY ĐỂ HIỂN THỊ 3 TAB
         new TabLayoutMediator(tabLayout, viewPager,
                 (tab, position) -> {
-                    if (position == 0) {
-                        tab.setText("Đơn chờ xác nhận");
-                    } else {
-                        tab.setText("Đơn đã xử lý");
+                    switch (position) {
+                        case 0:
+                            tab.setText("Đơn chờ xác nhận");
+                            break;
+                        case 1:
+                            tab.setText("Đơn đã xử lý");
+                            break;
+                        case 2:
+                            tab.setText("Ăn tại quán"); // ⭐️ TAB MỚI
+                            break;
                     }
                 }
         ).attach();

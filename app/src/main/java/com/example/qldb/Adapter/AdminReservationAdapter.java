@@ -5,84 +5,125 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.ImageButton;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
 import com.example.qldb.R;
 import com.example.qldb.ReservationModel;
+
 import java.util.List;
+import java.util.Locale;
 
 public class AdminReservationAdapter extends ArrayAdapter<ReservationModel> {
 
-    private final boolean showActions;
+    private final List<ReservationModel> reservationList;
+    private final Context mContext;
     private OnActionClickListener actionClickListener;
 
-    /**
-     * Interface để báo cho Fragment biết khi nào nút (✓) hoặc (✗) được bấm.
-     */
+    // ⭐️ SỬA LẠI: Thêm 2 boolean để kiểm soát nút
+    private final boolean showPendingActions; // Hiện nút Confirm/Cancel
+    private final boolean showFinishAction;   // Hiện nút "Ăn xong"
+
+    // ⭐️ Interface listener (THÊM 1 HÀM MỚI)
     public interface OnActionClickListener {
         void onConfirmClick(ReservationModel reservation);
         void onCancelClick(ReservationModel reservation);
+        void onFinishClick(ReservationModel reservation); // ⭐️ HÀM MỚI
     }
 
     public void setOnActionClickListener(OnActionClickListener listener) {
         this.actionClickListener = listener;
     }
 
-    public AdminReservationAdapter(@NonNull Context context, @NonNull List<ReservationModel> objects, boolean showActions) {
-        super(context, 0, objects);
-        this.showActions = showActions; // true nếu là tab PENDING, false cho các tab khác
+    // ⭐️ SỬA CONSTRUCTOR
+    public AdminReservationAdapter(@NonNull Context context, List<ReservationModel> list,
+                                   boolean showPendingActions, boolean showFinishAction) {
+        super(context, 0, list);
+        this.mContext = context;
+        this.reservationList = list;
+        this.showPendingActions = showPendingActions;
+        this.showFinishAction = showFinishAction;
     }
 
     @NonNull
     @Override
     public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-        View listItemView = convertView;
-        if (listItemView == null) {
-            listItemView = LayoutInflater.from(getContext()).inflate(
-                    R.layout.admin_reservation_card_item, parent, false);
+        View listItem = convertView;
+        if (listItem == null) {
+            listItem = LayoutInflater.from(mContext).inflate(R.layout.list_item_admin_reservation, parent, false);
         }
 
-        ReservationModel currentReservation = getItem(position);
+        ReservationModel currentReservation = reservationList.get(position);
 
-        // Ánh xạ các view trong card
-        TextView tvContact = listItemView.findViewById(R.id.tvItemAdminContact);
-        TextView tvDateTime = listItemView.findViewById(R.id.tvItemAdminDateTime);
-        TextView tvPeople = listItemView.findViewById(R.id.tvItemAdminPeople);
-        LinearLayout actionLayout = listItemView.findViewById(R.id.action_layout);
-        ImageButton btnConfirm = listItemView.findViewById(R.id.btnItemConfirm);
-        ImageButton btnCancel = listItemView.findViewById(R.id.btnItemCancel);
+        // --- 1. SỬA LỖI HIỂN THỊ THÔNG TIN (REQUEST 3) ---
+        TextView tvName = listItem.findViewById(R.id.tvCustomerName);
+        TextView tvPhone = listItem.findViewById(R.id.tvCustomerPhone);
+        TextView tvGuestCount = listItem.findViewById(R.id.tvGuestCount);
+        TextView tvDateTime = listItem.findViewById(R.id.tvDateTime);
 
-        if (currentReservation != null) {
-            // Set data
-            tvContact.setText(currentReservation.getContactInfo());
-            tvDateTime.setText(currentReservation.getDateTimeInfo());
+        // Lấy dữ liệu (an toàn, tránh lỗi "null")
+        String name = (currentReservation.contactName != null) ? currentReservation.contactName : "Không có tên";
+        String phone = (currentReservation.phone != null) ? currentReservation.phone : "Không có SĐT";
 
-            int totalPeople = currentReservation.numAdults + currentReservation.numChildren;
-            tvPeople.setText("Số lượng: " + totalPeople + " người");
+        // Tính tổng số người
+        int adults = currentReservation.numAdults;
+        int children = currentReservation.numChildren;
+        int totalGuests = adults + children;
 
-            // Ẩn/hiện cụm nút ✓/✗
-            if (showActions) {
-                actionLayout.setVisibility(View.VISIBLE);
+        // Định dạng chuỗi hiển thị
+        String guestText = String.format(Locale.getDefault(), "Số lượng: %d người (%dL, %dTE)", totalGuests, adults, children);
+        String dateTimeText = String.format("Ngày: %s - Giờ: %s", currentReservation.date, currentReservation.time);
 
-                // Gán sự kiện click cho nút
-                btnConfirm.setOnClickListener(v -> {
-                    if (actionClickListener != null) {
-                        actionClickListener.onConfirmClick(currentReservation);
-                    }
-                });
-                btnCancel.setOnClickListener(v -> {
-                    if (actionClickListener != null) {
-                        actionClickListener.onCancelClick(currentReservation);
-                    }
-                });
-            } else {
-                // Nếu đây là tab "Đã xác nhận", ẩn các nút đi
-                actionLayout.setVisibility(View.GONE);
-            }
+        // Set text
+        tvName.setText(name);
+        tvPhone.setText(phone);
+        tvGuestCount.setText(guestText);
+        tvDateTime.setText(dateTimeText);
+
+        // --- 2. XỬ LÝ CÁC NÚT HÀNH ĐỘNG (REQUEST 1) ---
+        LinearLayout llPendingActions = listItem.findViewById(R.id.llPendingActions);
+        Button btnFinishDining = listItem.findViewById(R.id.btnFinishDining);
+
+        Button btnConfirm = listItem.findViewById(R.id.btnConfirm);
+        Button btnCancel = listItem.findViewById(R.id.btnCancel);
+
+        // Ẩn/Hiện nhóm nút "Chờ xác nhận"
+        if (showPendingActions) {
+            llPendingActions.setVisibility(View.VISIBLE);
+
+            btnConfirm.setOnClickListener(v -> {
+                if (actionClickListener != null) {
+                    actionClickListener.onConfirmClick(currentReservation);
+                }
+            });
+
+            btnCancel.setOnClickListener(v -> {
+                if (actionClickListener != null) {
+                    actionClickListener.onCancelClick(currentReservation);
+                }
+            });
+
+        } else {
+            llPendingActions.setVisibility(View.GONE);
         }
-        return listItemView;
+
+        // Ẩn/Hiện nút "Ăn xong"
+        if (showFinishAction) {
+            btnFinishDining.setVisibility(View.VISIBLE);
+
+            btnFinishDining.setOnClickListener(v -> {
+                if (actionClickListener != null) {
+                    actionClickListener.onFinishClick(currentReservation); // ⭐️ GỌI HÀM MỚI
+                }
+            });
+        } else {
+            btnFinishDining.setVisibility(View.GONE);
+        }
+
+        return listItem;
     }
 }
