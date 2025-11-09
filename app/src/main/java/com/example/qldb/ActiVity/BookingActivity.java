@@ -267,6 +267,8 @@ public class BookingActivity extends AppCompatActivity {
                 .create();
 
         view.findViewById(R.id.btnBack).setOnClickListener(v -> dialog.dismiss());
+        view.findViewById(R.id.btnBack).setOnClickListener(v -> dialog.dismiss());
+
 
         // ⭐️⭐️ ĐÂY LÀ THAY ĐỔI QUAN TRỌNG NHẤT ⭐️⭐️
 // ⬇️ ĐÂY LÀ CODE ĐÚNG ⬇️
@@ -289,6 +291,8 @@ public class BookingActivity extends AppCompatActivity {
             );
 
             if (newId > 0) {
+                saveReservationToSharedPrefs(name, date, time);
+
                 Toast.makeText(this, "Đặt chỗ thành công!", Toast.LENGTH_SHORT).show();
 
                 // 🔹 Quay lại màn lịch sử
@@ -301,11 +305,16 @@ public class BookingActivity extends AppCompatActivity {
         });
         dialog.show();
     }
-
-    // ⭐️ Hàm này không còn cần thiết cho việc đặt chỗ nữa
-    // (Bạn có thể giữ nó nếu ReservationHistoryActivity vẫn đang dùng,
-    // nhưng TỐT NHẤT là nên xóa nó và sửa ReservationHistoryActivity)
     private void saveReservationToSharedPrefs(String restaurantName, String date, String time) {
-        // ...
+        android.content.SharedPreferences prefs = getSharedPreferences("reservations", MODE_PRIVATE);
+        android.content.SharedPreferences.Editor editor = prefs.edit();
+
+
+
+
+        String existing = prefs.getString("data", "");
+        String newEntry = restaurantName + "|" + date + "|" + time + ";";
+        editor.putString("data", existing + newEntry);
+        editor.apply();
     }
 }
