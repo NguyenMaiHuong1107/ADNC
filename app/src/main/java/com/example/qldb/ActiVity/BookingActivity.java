@@ -32,6 +32,7 @@ public class BookingActivity extends AppCompatActivity {
 
     private int adult = 1;
     private int child = 0;
+    private static final int MAX_HOLD_MINUTES    = 20; // 🔔 giữ bàn tối đa 20 phút
 
     private DatabaseHelper dbHelper; // ⭐️ Khai báo DatabaseHelper
 
@@ -123,16 +124,45 @@ public class BookingActivity extends AppCompatActivity {
             String email = getText(edtEmail);
             String name  = getText(edtContact);
             String notes = getText(edtNote); // ⭐️ Lấy text ghi chú
-
+            String date  = getText(edtDate);
+            String time  = getText(edtTime);
             if (phone.isEmpty()) { edtPhone.setError("Vui lòng nhập số điện thoại"); edtPhone.requestFocus(); return; }
             if (!email.isEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
                 edtEmail.setError("Email không hợp lệ"); edtEmail.requestFocus(); return;
             }
             if (name.isEmpty()) { edtContact.setError("Vui lòng nhập tên liên hệ"); edtContact.requestFocus(); return; }
 
-            // ⭐️ Truyền thêm ghi chú vào dialog
-            showConfirmDialog(adult, child, getText(edtDate), getText(edtTime), phone, email, name, notes);
+            // ==== Phải đặt trước ít nhất 60 phút ====
+            if (!isAtLeastMinutesAhead(date, time, MIN_ADVANCE_MINUTES)) {
+                Toast.makeText(this, "Thời gian đặt bàn phải trước ít nhất 60 phút.", Toast.LENGTH_SHORT).show();
+                if (edtTime != null) edtTime.requestFocus();
+                return;
+            }
 
+            // ==== Ràng buộc số người theo chính sách bàn ====
+            int eqAdults = toEquivalentAdults(adult, child);
+
+            // 2.1. Nếu ít hơn tối thiểu 5 người lớn (người lớn THỰC TẾ)
+            if (adult < MIN_TABLE_ADULTS) {
+                String msg = "Số người lớn bạn đặt (" + adult + ") ít hơn tối thiểu (" + MIN_TABLE_ADULTS +
+                        "). Nhà hàng chỉ phục vụ 1 bàn từ 5 người lớn trở lên. " +
+                        "Đơn của bạn có thể bị ghép bàn với khách khác. Bạn có đồng ý tiếp tục đặt không?";
+                showSoftWarning(msg, () -> showConfirmDialog(adult, child, date, time, phone, email, name, notes));
+                return;
+            }
+
+// 2.2. Nếu vượt quá tối đa 1 bàn (tính theo quy đổi 2 trẻ = 1 lớn)
+            if (eqAdults > MAX_TABLE_ADULTS) {
+                String msg = "Tổng số người quy đổi (" + eqAdults + ") đã vượt sức chứa tối đa 1 bàn (" + MAX_TABLE_ADULTS + "). " +
+                        "Lưu ý: 2 trẻ em được tính như 1 người lớn để đảm bảo chỗ ngồi. " +
+                        "Đơn của bạn có thể được chia hoặc ghép bàn khi nhân viên xác nhận. Bạn có đồng ý tiếp tục không?";
+                showSoftWarning(msg, () -> showConfirmDialog(adult, child, date, time, phone, email, name, notes));
+                return;
+            }
+
+
+            // OK: Qua confirm như bình thường
+            showConfirmDialog(adult, child, date, time, phone, email, name, notes);
 
 
         });
@@ -267,6 +297,9 @@ public class BookingActivity extends AppCompatActivity {
                 .create();
 
         view.findViewById(R.id.btnBack).setOnClickListener(v -> dialog.dismiss());
+        ((TextView) view.findViewById(R.id.tvConfirmHoldNote))
+                .setText("Nhà hàng giữ bàn tối đa " + MAX_HOLD_MINUTES
+                        + " phút kể từ giờ bạn đặt. Quá thời gian, đặt chỗ có thể bị hủy/ghép bàn.");
 
         // ⭐️⭐️ ĐÂY LÀ THAY ĐỔI QUAN TRỌNG NHẤT ⭐️⭐️
 // ⬇️ ĐÂY LÀ CODE ĐÚNG ⬇️
@@ -308,4 +341,28 @@ public class BookingActivity extends AppCompatActivity {
     private void saveReservationToSharedPrefs(String restaurantName, String date, String time) {
         // ...
     }
+    // ====== Booking constraints ======
+    private static final int MIN_ADVANCE_MINUTES = 60; // phải đặt trước ít nhất 60'
+    private static final int MIN_TABLE_ADULTS    = 5;  // tối thiểu 5 người lớn (thực tế)
+    private static final int MAX_TABLE_ADULTS    = 8;  // tối đa 8 người lớn (quy đổi, 2 trẻ = 1 lớn)
+
+    /** Quy đổi số ghế kiểm tra trần tối đa: 2 trẻ = 1 lớn (làm tròn lên) */
+    private int toEquivalentAdults(int adult, int child) {
+        int childAsAdult = (child + 1) / 2; // ceil(child/2)
+        return adult + childAsAdult;
+    }
+
+    /** Hộp thoại cảnh báo mềm, người dùng đồng ý thì chạy onYes.run() */
+    private void showSoftWarning(String message, Runnable onYes) {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Lưu ý")
+                .setMessage(message)
+                .setPositiveButton("Đồng ý", (d, w) -> {
+                    d.dismiss();
+                    if (onYes != null) onYes.run();
+                })
+                .setNegativeButton("Không", (d, w) -> d.dismiss())
+                .show();
+    }
+
 }

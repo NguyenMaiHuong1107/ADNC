@@ -215,7 +215,7 @@
                     android:clickable="true"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="15/09/2025"/>
+                    />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Space
@@ -237,7 +237,7 @@
                     android:clickable="true"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="10:00"/>
+                    />
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
