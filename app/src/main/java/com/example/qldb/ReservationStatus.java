@@ -2,10 +2,12 @@ package com.example.qldb;
 
 // Enum cho trạng thái của bảng Reservations
 public enum ReservationStatus {
+    // ⭐️ CHỈ CẦN THÊM ON_SITE VÀO DANH SÁCH NÀY
     PENDING("pending"),
     CONFIRMED("confirmed"),
     CANCELLED("cancelled"),
-    COMPLETED("completed");
+    COMPLETED("completed"),
+    ON_SITE("on_site"); // ⭐️ ĐÃ THÊM
 
     private final String value;
 
@@ -24,8 +26,11 @@ public enum ReservationStatus {
                 return status;
             }
         }
-        throw new IllegalArgumentException("Invalid ReservationStatus value: " + value);
+        // Có thể trả về null hoặc một giá trị mặc định thay vì ném ra lỗi
+        // throw new IllegalArgumentException("Invalid ReservationStatus value: " + value);
+        return null;
     }
+
     public String getDisplayName() {
         switch (this) {
             case PENDING:
@@ -36,10 +41,10 @@ public enum ReservationStatus {
                 return "Đã hủy";
             case COMPLETED:
                 return "Hoàn thành";
+            case ON_SITE: // ⭐️ THÊM CASE CHO ON_SITE
+                return "Đang ăn tại quán";
             default:
                 return "Không xác định";
         }
     }
 }
-
-

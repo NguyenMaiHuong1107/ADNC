@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_margin="8dp">
+
+    <TextView
+    android:id="@+id/tvCustomerName"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="Tên Khách Hàng"
+    android:textSize="18sp"
+    android:textStyle="bold"
+    android:textColor="@android:color/black" />
+
+    <TextView
+        android:id="@+id/tvCustomerPhone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="09xxxxxxxx"
+        android:textSize="16sp"
+        android:layout_marginTop="4dp" />
+
+    <TextView
+        android:id="@+id/tvGuestCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Số lượng: 4 người (2L, 2TE)"
+        android:textSize="16sp"
+        android:layout_marginTop="4dp" />
+
+    <TextView
+        android:id="@+id/tvDateTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ngày: 10/11/2025 - Giờ: 18:00"
+        android:textSize="16sp"
+        android:layout_marginTop="4dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp">
+
+        <LinearLayout
+            android:id="@+id/llPendingActions"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:visibility="gone"> <Button
+            android:id="@+id/btnConfirm"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="✓"
+            android:textSize="16sp"
+            android:backgroundTint="#4CAF50"
+            android:textColor="@android:color/white"
+            android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btnCancel"
+                style="@style/Widget.AppCompat.Button.Colored"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="✗"
+                android:textSize="16sp"
+                android:backgroundTint="#F44336"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnFinishDining"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Khách đã ăn xong"
+            android:backgroundTint="#03A9F4"
+            android:textColor="@android:color/white"
+            android:visibility="gone" /> </LinearLayout>
+</LinearLayout>
