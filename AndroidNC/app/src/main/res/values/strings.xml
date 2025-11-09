@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">QLDB</string>
+    <string-array name="status_array">
+        <item>Chờ xác nhận</item>
+        <item>Đã xác nhận</item>
+        <item>Đã hủy</item>
+        <item>Hoàn thành</item>
+    </string-array>
+</resources>
+

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.QLDB"
+        tools:targetApi="31">
+
+        <!-- Đăng ký SignUpActivity làm màn hình khởi động -->
+        <activity
+            android:name=".ActiVity.AccountActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Giữ MainActivity nhưng không làm launcher -->
+        <activity
+            android:name=".ActiVity.MainActivity"
+            android:exported="true" />
+
+        <activity
+            android:name=".ActiVity.HomeActivity"
+            android:exported="false" />
+
+        <activity
+        android:name=".ActiVity.SignUpActivity"
+        android:exported="false" />
+
+        <activity
+            android:name=".ActiVity.SettingActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ActiVity.SignInActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ActiVity.BookingActivity"
+            android:exported="false" />
+        <activity android:name=".ActiVity.ReservationHistoryActivity" />
+
+    </application>
+
+</manifest>
