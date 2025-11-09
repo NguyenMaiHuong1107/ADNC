@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@android:color/white"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+
+        <!-- TextView nội dung -->
+        <TextView
+            android:id="@+id/tvQuyDinh"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/black"
+            android:textSize="15sp"
+            android:lineSpacingExtra="4dp" />
+        <!-- Nút Xem thêm -->
+        <TextView
+            android:id="@+id/btnXemThem"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:paddingHorizontal="32dp"
+            android:paddingVertical="8dp"
+            android:text="Xem thêm"
+            android:textColor="#FF3B30"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:background="@drawable/btn_xem_them_border" />
+        <!-- Button cố định cuối màn -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBookNow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:backgroundTint="#FF3B30"
+            android:text="Đặt chỗ ngay"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_margin="12dp"
+            app:cornerRadius="12dp" />
+
+    </LinearLayout>
+</ScrollView>

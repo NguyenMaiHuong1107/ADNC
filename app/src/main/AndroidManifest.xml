@@ -12,34 +12,43 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.QLDB"
         tools:targetApi="31">
-
-        <!-- Đăng ký SignUpActivity làm màn hình khởi động -->
+        <activity
+            android:name=".ActiVity.AdminUsersFragment"
+            android:exported="false" />
+        <activity
+            android:name=".ActiVity.ReservationListFragment"
+            android:exported="false" />
+        <activity
+            android:name=".ActiVity.AdminReservationsFragment"
+            android:exported="false" />
+        <activity
+            android:name=".ActiVity.AdminHomeFragment"
+            android:exported="false" />
+        <activity
+            android:name=".ActiVity.AdminActivity"
+            android:exported="false"
+            android:theme="@style/Theme.QLDB" /> <!-- Đăng ký SignUpActivity làm màn hình khởi động -->
         <activity
             android:name=".ActiVity.AccountActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-
-        <!-- Giữ MainActivity nhưng không làm launcher -->
+        </activity> <!-- Giữ MainActivity nhưng không làm launcher -->
         <activity
             android:name=".ActiVity.MainActivity"
             android:exported="true" />
-
         <activity
             android:name=".ActiVity.HomeActivity"
             android:exported="false" />
-
         <activity
-        android:name=".ActiVity.SignUpActivity"
-        android:exported="false" />
-
+            android:name=".ActiVity.SignUpActivity"
+            android:exported="false" />
         <activity
             android:name=".ActiVity.SettingActivity"
             android:exported="false" />
-
         <activity
             android:name=".ActiVity.SignInActivity"
             android:exported="false" />
@@ -47,7 +56,6 @@
             android:name=".ActiVity.BookingActivity"
             android:exported="false" />
         <activity android:name=".ActiVity.ReservationHistoryActivity" />
-
     </application>
 
 </manifest>

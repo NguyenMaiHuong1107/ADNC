@@ -39,6 +39,9 @@ public class SignInActivity extends AppCompatActivity {
         dbHelper = new DatabaseHelper(this);
 
         // Xử lý nút Đăng nhập
+// Trong file SignInActivity.java
+// Sửa lại đoạn trong btnSignIn.setOnClickListener
+
         btnSignIn.setOnClickListener(v -> {
             String phone = etPhone.getText().toString().trim();
             String password = etPassword.getText().toString().trim();
@@ -62,7 +65,10 @@ public class SignInActivity extends AppCompatActivity {
                     // ✅ Lấy thông tin người dùng từ DB (dùng hàm bạn đã có)
                     UserModel u = dbHelper.getUserById(userId);
 
-                    // ✅ Lưu cả user_id + full_name + phone vào SharedPreferences
+                    // ⭐️⭐️ BƯỚC QUAN TRỌNG: Lấy role ⭐️⭐️
+                    String userRole = dbHelper.getUserRole(userId);
+
+                    // ✅ Lưu cả user_id + full_name + phone + role vào SharedPreferences
                     SharedPreferences prefs = getSharedPreferences("UserSession", MODE_PRIVATE);
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putInt("user_id", userId);
@@ -70,20 +76,29 @@ public class SignInActivity extends AppCompatActivity {
                         editor.putString("full_name", u.fullName);
                         editor.putString("phone", u.phone);
                     }
+                    // ⭐️ Lưu cả role vào session
+                    editor.putString("user_role", userRole);
                     editor.apply();
 
                     Toast.makeText(this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
-                    startActivity(new Intent(SignInActivity.this, HomeActivity.class));
+
+                    // ⭐️⭐️ PHÂN LUỒNG: Admin hay User? ⭐️⭐️
+                    if ("admin".equals(userRole)) {
+                        // Nếu là Admin, đi tới trang Admin
+                        startActivity(new Intent(SignInActivity.this, AdminActivity.class));
+                    } else {
+                        // Nếu là User, đi tới trang Home
+                        startActivity(new Intent(SignInActivity.this, HomeActivity.class));
+                    }
                     finish();
+
                 } else {
                     Toast.makeText(this, "Không tìm thấy người dùng!", Toast.LENGTH_SHORT).show();
                 }
             } else {
                 Toast.makeText(this, "Số điện thoại hoặc mật khẩu không đúng", Toast.LENGTH_SHORT).show();
             }
-
         });
-
         // Liên kết sang màn hình Đăng ký
         tvSignUpLink.setOnClickListener(v -> {
             startActivity(new Intent(SignInActivity.this, SignUpActivity.class));

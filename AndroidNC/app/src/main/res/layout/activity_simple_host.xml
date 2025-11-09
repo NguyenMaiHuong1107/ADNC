@@ -1,0 +1,22 @@
+<!-- res/layout/activity_simple_host.xml -->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <!-- Nội dung trang (tuỳ mỗi Activity set layout riêng ở trên) -->
+    <FrameLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:paddingBottom="68dp"/>
+
+    <!-- Thanh menu -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        android:layout_width="match_parent" android:layout_height="68dp"
+        android:layout_gravity="bottom"
+        android:background="#FFFFFF" android:elevation="8dp"
+        app:menu="@menu/menu_bottom_nav"
+        app:itemIconTint="@color/nav_item_color"
+        app:itemTextColor="@color/nav_item_color"/>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
